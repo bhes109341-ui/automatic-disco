@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👻 幽靈圖書館單字挑戰</title>
+    <style>
+        body {
+            background-color: #1a1a2e;
+            color: #f0f0f0;
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #game-container {
+            background-color: #16213e;
+            padding: 30px;
+            border-radius: 20px;
+            border: 4px solid #4834d4;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            max-width: 500px;
+        }
+
+        h1 {
+            color: #95afc0;
+            text-shadow: 2px 2px #000;
+            margin-top: 0;
+        }
+
+        #ghost-icon {
+            font-size: 50px;
+            margin-bottom: 10px;
+            animation: float 2s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        #word-display {
+            font-size: 3rem;
+            letter-spacing: 15px;
+            margin: 20px 0;
+            color: #f0932b;
+            font-weight: bold;
+        }
+
+        #hint {
+            font-size: 1.2rem;
+            color: #bebebe;
+            background: #0f3460;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        #lives-container {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+
+        .candle {
+            display: inline-block;
+            margin: 0 5px;
+            transition: opacity 0.5s;
+        }
+
+        #keyboard {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        button.letter-btn {
+            background: #4834d4;
+            color: white;
+            border: none;
+            padding: 10px;
+            font-size: 1.1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        button.letter-btn:hover { background: #686de0; }
+        button.letter-btn:disabled { background: #30336b; color: #535c68; cursor: not-allowed; }
+
+        #message {
+            margin-top: 20px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            min-height: 1.5em;
+        }
+
+        #reset-btn {
+            background: #eb4d4b;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border-radius: 10px;
+            cursor: pointer;
+            display: none;
+            margin: 20px auto 0;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="ghost-icon">👻</div>
+    <h1>幽靈圖書館</h1>
+    
+    <div id="lives-container">
+        蠟燭能量: <span id="candles">🕯️🕯️🕯️🕯️🕯️</span>
+    </div>
+
+    <div id="hint">點擊字母來解開單字！</div>
+    <div id="word-display">_ _ _</div>
+
+    <div id="keyboard"></div>
+
+    <div id="message"></div>
+    <button id="reset-btn" onclick="startGame()">下一關</button>
+</div>
+
+<script>
+    // 國小三年級程度單字庫
+    const words = [
+        { w: "APPLE", h: "🍎 一種紅色的水果" },
+        { w: "CAT", h: "🐱 會喵喵叫的小動物" },
+        { w: "BIRD", h: "🐦 在天上飛的動物" },
+        { w: "BLUE", h: "💙 大海的顏色" },
+        { w: "MILK", h: "🥛 白色的營養飲品" },
+        { w: "CAKE", h: "🎂 生日要吃的甜點" },
+        { w: "FISH", h: "🐟 在水裡游泳" },
+        { w: "BOOK", h: "📖 你正在圖書館看什麼？" },
+        { w: "PINK", h: "🌸 很多小女生喜歡的顏色" },
+        { w: "DOG", h: "🐶 人類最忠實的朋友" }
+    ];
+
+    let targetWord = "";
+    let displayArray = [];
+    let lives = 5;
+    let guessedLetters = [];
+
+    function startGame() {
+        const item = words[Math.floor(Math.random() * words.length)];
+        targetWord = item.w;
+        displayArray = Array(targetWord.length).fill("_");
+        lives = 5;
+        guessedLetters = [];
+
+        document.getElementById('word-display').innerText = displayArray.join(" ");
+        document.getElementById('hint').innerText = "提示：" + item.h;
+        document.getElementById('message').innerText = "";
+        document.getElementById('reset-btn').style.display = "none";
+        document.getElementById('ghost-icon').innerText = "👻";
+        updateLives();
+        createKeyboard();
+    }
+
+    function createKeyboard() {
+        const keyboard = document.getElementById('keyboard');
+        keyboard.innerHTML = "";
+        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        for (let l of letters) {
+            let btn = document.createElement('button');
+            btn.innerText = l;
+            btn.classList.add('letter-btn');
+            btn.onclick = () => handleGuess(l, btn);
+            keyboard.appendChild(btn);
+        }
+    }
+
+    function handleGuess(letter, btn) {
+        btn.disabled = true;
+        if (targetWord.includes(letter)) {
+            for (let i = 0; i < targetWord.length; i++) {
+                if (targetWord[i] === letter) displayArray[i] = letter;
+            }
+            document.getElementById('word-display').innerText = displayArray.join(" ");
+            checkWin();
+        } else {
+            lives--;
+            updateLives();
+            checkLoss();
+        }
+    }
+
+    function updateLives() {
+        let candleStr = "";
+        for (let i = 0; i < lives; i++) candleStr += "🕯️";
+        document.getElementById('candles').innerText = candleStr || "💨 (熄滅了)";
+    }
+
+    function checkWin() {
+        if (!displayArray.includes("_")) {
+            document.getElementById('message').innerText = "🎉 太棒了！你照亮了圖書館！";
+            document.getElementById('message').style.color = "#6ab04c";
+            disableAllButtons();
+            document.getElementById('reset-btn').style.display = "block";
+        }
+    }
+
+    function checkLoss() {
+        if (lives <= 0) {
+            document.getElementById('message').innerText = "😨 蠟燭熄滅了！答案是 " + targetWord;
+            document.getElementById('message').style.color = "#eb4d4b";
+            document.getElementById('ghost-icon').innerText = "😈";
+            disableAllButtons();
+            document.getElementById('reset-btn').style.display = "block";
+            document.getElementById('reset-btn').innerText = "再試一次";
+        }
+    }
+
+    function disableAllButtons() {
+        const btns = document.querySelectorAll('.letter-btn');
+        btns.forEach(b => b.disabled = true);
+    }
+
+    startGame();
+</script>
+
+</body>
+</html>
